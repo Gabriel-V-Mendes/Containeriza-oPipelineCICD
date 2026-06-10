@@ -1,0 +1,53 @@
+name: CI/CD Pipeline
+
+# O pipeline será acionado sempre que fizermos um push para a branch main
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ==========================================
+  # JOB 1: Testes Automatizados
+  # ==========================================
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Rodar testes via Docker Compose
+        # Usamos exatamente o comando que você validou na sua máquina!
+        run: docker compose run api pytest tests/
+
+  # ==========================================
+  # JOB 2: Build, Scan e Registry
+  # ==========================================
+  build-and-scan:
+    name: Build & Security Scan
+    needs: test # Este job SÓ roda se o job de 'test' passar (ficar verde)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Build da Imagem Docker
+        # Criamos a imagem para poder escaneá-la
+        run: docker build -t devops-api:latest .
+
+      - name: Scan de Vulnerabilidades (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'devops-api:latest'
+          format: 'table'
+          # Se achar vulnerabilidades CRÍTICAS, o pipeline quebra (falha) na hora!
+          exit-code: '1' 
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL'
+          
+      - name: Mensagem de Sucesso
+        run: echo "🚀 Imagem construída e segura! Pronta para ser enviada ao Registry."
