@@ -1,0 +1,26 @@
+[project]
+name = "devops-api"
+version = "1.0.0"
+description = "API FastAPI containerizada com CI/CD (projeto de portfólio DevOps)"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/W: pycodestyle  F: pyflakes  I: isort  B: bugbear  UP: pyupgrade  SIM: simplify
+select = ["E", "W", "F", "I", "B", "UP", "SIM"]
+# B008: Depends()/Query() em defaults é o padrão idiomático do FastAPI.
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+source = ["app"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 90

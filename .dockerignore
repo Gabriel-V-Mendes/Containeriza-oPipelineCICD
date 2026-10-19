@@ -1,8 +1,7 @@
-.git
-.github
-__pycache__
-*.ptc
-tests/
-.env
-venv/
-.pytest_cache/
+# Estratégia "allowlist": ignora tudo e libera só o que a imagem precisa.
+# Assim nenhum arquivo novo (.env, chaves, dumps...) vaza para a imagem por acidente.
+*
+!requirements.txt
+!app/
+**/__pycache__
+**/*.pyc

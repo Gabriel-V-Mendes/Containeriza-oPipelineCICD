@@ -1,0 +1,43 @@
+# Dependabot: abre PRs semanais de atualização. Cada PR passa pelo mesmo
+# pipeline (lint, testes, build, Trivy) antes de poder ser mergeado.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Ferramentas de dev vêm num PR só, para reduzir ruído.
+      dev-tools:
+        patterns: ["pytest*", "ruff", "httpx*"]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: docker # imagem base do Dockerfile (atualiza o digest)
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "deps(docker)"
+
+  - package-ecosystem: docker-compose # postgres / pgadmin nos arquivos de Compose
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "deps(compose)"
+
+  - package-ecosystem: github-actions # actions fixadas por SHA
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"

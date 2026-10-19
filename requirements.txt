@@ -1,5 +1,7 @@
-fastapi==0.111.0
-uvicorn==0.30.1
-pydantic==2.7.4
-pytest==8.2.2
-httpx==0.27.0
+# Dependências de RUNTIME (são as únicas que entram na imagem final).
+# Ferramentas de teste/lint ficam em requirements-dev.txt.
+fastapi==0.146.0
+uvicorn==0.54.0
+pydantic==2.14.1
+SQLAlchemy==2.1.5
+psycopg[binary]==3.3.6

@@ -1,0 +1,7 @@
+# Dependências de DESENVOLVIMENTO / CI (não entram na imagem).
+-r requirements.txt
+pytest==9.1.1
+pytest-cov==7.1.0
+# httpx2: cliente HTTP usado pelo TestClient (o Starlette marcou o httpx como deprecated).
+httpx2==2.14.0
+ruff==0.17.1

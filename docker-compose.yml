@@ -1,38 +1,63 @@
+# Ambiente LOCAL / CI. Sobe tudo com um comando:
+#   docker compose up -d --build --wait
+#
+# As credenciais abaixo são defaults de DESENVOLVIMENTO (só escutam em 127.0.0.1).
+# Para sobrescrever, copie .env.example para .env. Produção usa docker-compose.prod.yml,
+# que NÃO tem defaults e exige um .env no servidor.
+name: devops-api
+
 services:
   api:
     build: .
+    # Permite que o CI reutilize a imagem que acabou de construir (API_IMAGE=...).
+    image: ${API_IMAGE:-devops-api:local}
     ports:
-      - "8000:8000"
-    depends_on:
-      - db
+      - "127.0.0.1:${API_PORT:-8000}:8000"
     environment:
-      - DATABASE_URL=postgresql://devops_user:devops_pass@db:5432/devops_db
-   
-    volumes:
-      - ./app:/app/app       # Espelha o código em tempo real (ótimo para dev)
-      - ./tests:/app/tests   # Espelha os arquivos de teste
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-devops}:${POSTGRES_PASSWORD:-devops}@db:5432/${POSTGRES_DB:-devops}
+      APP_VERSION: ${APP_VERSION:-local}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   db:
-    image: postgres:15-alpine
-    restart: always
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
     environment:
-      POSTGRES_USER: devops_user
-      POSTGRES_PASSWORD: devops_pass
-      POSTGRES_DB: devops_db
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-devops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devops}
+      POSTGRES_DB: ${POSTGRES_DB:-devops}
+    # Sem "ports": o banco só é acessível pela rede interna do Compose (API e pgAdmin).
+    # Evita conflito com um Postgres já instalado na máquina e não expõe o banco.
+    # Se precisar acessar do host: docker compose exec db psql -U devops
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
 
+  # Opcional: docker compose --profile tools up -d  ->  http://localhost:5050
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4:9
+    profiles: ["tools"]
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@devops.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
-      - "5050:80"
+      - "127.0.0.1:5050:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:

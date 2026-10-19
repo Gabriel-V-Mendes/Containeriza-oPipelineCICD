@@ -1,53 +1,262 @@
-name: CI/CD Pipeline
+name: CI/CD
 
-# O pipeline será acionado sempre que fizermos um push para a branch main
+# PR para a main -> lint + secret scan + testes + build/scan (sem push)
+# push na main    -> tudo acima + push da imagem no GHCR + deploy via Compose (se habilitado)
+# tag v*          -> publica a imagem com a versão semântica
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
+    tags: ["v*"]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
+  workflow_dispatch:
+
+# Em PRs, um push novo cancela a execução anterior (economiza minutos).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Princípio do menor privilégio: cada job pede só o que precisa.
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+  LOCAL_IMAGE: devops-api:ci
 
 jobs:
   # ==========================================
-  # JOB 1: Testes Automatizados
+  # Lint do código Python e do Dockerfile
+  # ==========================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Instalar ruff
+        run: pip install "$(grep -E '^ruff==' requirements-dev.txt)"
+
+      - name: Ruff (lint)
+        run: ruff check --output-format=github .
+
+      - name: Ruff (formatação)
+        run: ruff format --check .
+
+      - name: Hadolint (Dockerfile)
+        run: docker run --rm -i hadolint/hadolint:v2.15.1 < Dockerfile
+
+  # ==========================================
+  # Nenhum segredo no histórico do Git
+  # ==========================================
+  secrets:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # histórico completo: varre TODOS os commits
+          persist-credentials: false
+
+      - name: Gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 \
+            git /repo --redact --verbose --exit-code 1
+
+  # ==========================================
+  # Testes contra um Postgres real
   # ==========================================
   test:
-    name: Run Tests
+    name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # Credencial descartável do container de serviço do CI (não é segredo).
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/test
     steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
-
-      - name: Rodar testes via Docker Compose
-        # Usamos exatamente o comando que você validou na sua máquina!
-        run: docker compose run api pytest tests/
-
-  # ==========================================
-  # JOB 2: Build, Scan e Registry
-  # ==========================================
-  build-and-scan:
-    name: Build & Security Scan
-    needs: test # Este job SÓ roda se o job de 'test' passar (ficar verde)
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
-
-      - name: Build da Imagem Docker
-        # Criamos a imagem para poder escaneá-la
-        run: docker build -t devops-api:latest .
-
-      - name: Scan de Vulnerabilidades (Trivy)
-        uses: aquasecurity/trivy-action@master
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          image-ref: 'devops-api:latest'
-          format: 'table'
-          # Se achar vulnerabilidades CRÍTICAS, o pipeline quebra (falha) na hora!
-          exit-code: '1' 
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL'
-          
-      - name: Mensagem de Sucesso
-        run: echo "🚀 Imagem construída e segura! Pronta para ser enviada ao Registry."
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements-dev.txt
+
+      - name: Pytest (+ cobertura mínima de 90%)
+        run: pytest --cov --cov-report=term-missing
+
+  # ==========================================
+  # Build -> verificação non-root -> smoke test -> Trivy -> push GHCR
+  # ==========================================
+  build:
+    name: Build, Scan & Push
+    needs: [lint, secrets, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write # push no GHCR com o GITHUB_TOKEN (sem PAT)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build da imagem
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: ${{ env.LOCAL_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verificar que a imagem NÃO roda como root
+        run: |
+          uid=$(docker run --rm --entrypoint id "$LOCAL_IMAGE" -u)
+          user=$(docker image inspect -f '{{.Config.User}}' "$LOCAL_IMAGE")
+          echo "USER da imagem: '$user' | UID em execução: $uid"
+          if [ -z "$user" ] || [ "$uid" = "0" ]; then
+            echo "::error::A imagem final está rodando como root"
+            exit 1
+          fi
+
+      - name: Smoke test com Compose (API + Postgres)
+        env:
+          API_IMAGE: ${{ env.LOCAL_IMAGE }}
+        run: |
+          docker compose up -d --no-build --wait --wait-timeout 120
+          curl -fsS http://127.0.0.1:8000/health
+          curl -fsS http://127.0.0.1:8000/health/ready
+          curl -fsS -X POST http://127.0.0.1:8000/items \
+            -H 'Content-Type: application/json' -d '{"name": "smoke-test"}'
+          test "$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q api)")" = healthy
+
+      - name: Logs do Compose (em caso de falha)
+        if: failure()
+        run: docker compose logs
+
+      - name: Derrubar Compose
+        if: always()
+        run: docker compose down -v
+
+      - name: Scan de vulnerabilidades (Trivy)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.LOCAL_IMAGE }}
+          format: table
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true # só bloqueia o que já tem correção disponível
+          exit-code: "1"
+
+      - name: Metadados da imagem (tags e labels OCI)
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,format=long
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Login no GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push para o GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha # reaproveita o build acima: não recompila nada
+
+  # ==========================================
+  # Deploy via Docker Compose numa VPS (SSH)
+  # Só roda em push na main E se a variável DEPLOY_ENABLED=true existir.
+  # ==========================================
+  deploy:
+    name: Deploy (Compose via SSH)
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false # nunca interrompe um deploy no meio
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+      IMAGE_TAG: sha-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configurar SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_deploy ~/.ssh/known_hosts
+
+      - name: Enviar docker-compose.prod.yml
+        run: |
+          scp -i ~/.ssh/id_deploy docker-compose.prod.yml \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker-compose.prod.yml"
+
+      - name: docker compose pull + up (espera o healthcheck)
+        run: |
+          ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$DEPLOY_PATH' \
+             && export IMAGE_TAG='$IMAGE_TAG' \
+             && docker compose -f docker-compose.prod.yml pull api \
+             && docker compose -f docker-compose.prod.yml up -d --wait --wait-timeout 120 \
+             && docker compose -f docker-compose.prod.yml ps \
+             && docker image prune -f"
