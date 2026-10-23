@@ -256,14 +256,9 @@ Se o repositório for **privado**, o plano Free do GitHub inclui uma cota mensal
 4. **Backup do Postgres** (`pg_dump` agendado para um storage externo) e um teste de restauração. Sem isso, o volume da VPS é ponto único de falha.
 5. **Deploy sem indisponibilidade** (blue/green com o proxy) e um ambiente de **staging** antes de produção.
 6. **Assinar a imagem** com cosign (keyless via OIDC) e publicar SBOM e provenance, para a VPS só rodar imagem assinada pelo CI.
-7. **Segredos fora de arquivo `.env`** (Docker secrets, SOPS ou um vault) e **Rulesets** do GitHub no lugar da branch protection clássica.
+7. **Segredos fora de arquivo `.env`** (Docker secrets, SOPS ou um vault) e **Rulesets** do GitHub no lugar da branch protection clássicatá no `.gitignore`) e nos Secrets do GitHub.
+- Os defaults do `docker-compose.yml` (`devops`/`devops`) val.
 8. **Observabilidade:** logs em JSON, métricas Prometheus (`/metrics`) e alerta quando o `/health/ready` falhar.
 9. **Nome do repositório:** `Containeriza-oPipelineCICD` foi um erro de digitação (o "ç" e o "ã" viraram `-o`). Renomearia para algo como `fastapi-docker-cicd`.
 
 ---
-
-## Segurança
-
-- Nenhum segredo no histórico: `gitleaks git` → *no leaks found* (verificado localmente e a cada push no CI).
-- Credenciais reais só existem no `.env` do servidor (que está no `.gitignore`) e nos Secrets do GitHub.
-- Os defaults do `docker-compose.yml` (`devops`/`devops`) valem só para desenvolvimento local, com portas ligadas apenas em `127.0.0.1`.
