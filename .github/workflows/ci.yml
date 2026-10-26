@@ -260,3 +260,32 @@ jobs:
              && docker compose -f docker-compose.prod.yml up -d --wait --wait-timeout 120 \
              && docker compose -f docker-compose.prod.yml ps \
              && docker image prune -f"
+
+  # ==========================================
+  # GitOps (Projeto 3): Abre PR no repositório separado de manifests
+  # atualizando a tag da imagem em `values-dev.yaml`.
+  # Roda em push na main quando a variável GITOPS_ENABLED=true existir.
+  # ==========================================
+  gitops-pr:
+    name: Open PR in GitOps Repo
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.GITOPS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GITOPS_REPO: ${{ vars.GITOPS_REPO || 'Gabriel-V-Mendes/GitOps_Kubernets' }}
+      IMAGE_TAG: sha-${{ github.sha }}
+      GH_TOKEN: ${{ secrets.GITOPS_PAT }}
+    steps:
+      - name: Checkout do repositório de manifests (GitOps)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          token: ${{ secrets.GITOPS_PAT }}
+
+      - name: Atualizar tag em values-dev.yaml e abrir Pull Request
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          chmod +x ./scripts/open-image-pr.sh
+          ./scripts/open-image-pr.sh "$IMAGE_TAG" dev
