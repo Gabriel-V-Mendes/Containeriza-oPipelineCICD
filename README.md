@@ -135,6 +135,9 @@ Arquivo: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 Tags publicadas: `sha-<commit>` (imutável, é a usada no deploy), `main`, `latest` e `X.Y.Z` (quando há tag git `vX.Y.Z`).
 
+* **Evidência do CI (GitHub Actions):**
+  [Run #40395852418 no GitHub Actions](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/actions/runs/40395852418) (todos os jobs `Secret Scan`, `Lint`, `Test` e `Build, Scan & Push` aprovados na branch `main`).
+
 ### Deploy via Compose: configuração (uma vez)
 
 **Na VPS** (qualquer Linux com Docker):
