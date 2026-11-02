@@ -1,6 +1,6 @@
 # Dependências de RUNTIME (são as únicas que entram na imagem final).
 # Ferramentas de teste/lint ficam em requirements-dev.txt.
-fastapi==0.146.0
+fastapi==0.162.0
 uvicorn==0.54.0
 pydantic==2.14.1
 SQLAlchemy==2.1.5
