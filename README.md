@@ -163,8 +163,10 @@ Arquivo: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 Tags publicadas: `sha-<commit>` (imutável, é a usada no deploy), `main`, `latest` e `X.Y.Z` (quando há tag git `vX.Y.Z`).
 
-* **Evidência do CI (GitHub Actions):**
-  [Run #40395852418 no GitHub Actions](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/actions/runs/40395852418) (todos os jobs `Secret Scan`, `Lint`, `Test` e `Build, Scan & Push` aprovados na branch `main`).
+* **Evidência do CI e do Deploy Real na `main` (GitHub Actions):**
+  [Run #41867864099 no GitHub Actions](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/actions/runs/41867864099) — todos os jobs **`Lint`**, **`Secret Scan`**, **`Test`**, **`Build, Scan & Push`** e **`Deploy (Compose via SSH)`** aprovados (`✓`) na branch `main`.
+
+![Run #41867864099 na main com o job Deploy (Compose via SSH) Verde](docs/screenshots/ci-deploy-green.png)
 
 ### Deploy via Compose: configuração (uma vez)
 
@@ -303,11 +305,11 @@ Se o repositório for **privado**, o plano Free do GitHub inclui uma cota mensal
 
 Este repositório é o **Projeto 1** da trilha de engenharia DevOps/SRE:
 
-| Projeto | Repositório Oficial | Escopo Principal |
-|---|---|---|
-| **Projeto 1 (Este repo)** | [**`Gabriel-V-Mendes/Containeriza-oPipelineCICD`**](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD) | API FastAPI + PostgreSQL 17, Docker multi-stage non-root (`UID 10001`), CI/CD (Pytest, Gitleaks, Hadolint, Trivy, GHCR) e Deploy via Compose/SSH |
-| **Projeto 2** | [**`Gabriel-V-Mendes/infraestrutura-aws-terraform-localstack`**](https://github.com/Gabriel-V-Mendes/infraestrutura-aws-terraform-localstack) | IaC com OpenTofu 1.10+, S3 State Lock nativo (`.tflock`), federação OIDC sem chaves estáticas, FinOps e validação E2E em Floci |
-| **Projeto 3** | [**`Gabriel-V-Mendes/GitOps_Kubernets`**](https://github.com/Gabriel-V-Mendes/GitOps_Kubernets) | GitOps em Kubernetes (`kind`) para esta API com ArgoCD (`selfHeal`), Gateway API (Envoy Gateway), SOPS (`age`) + External Secrets e Argo Rollouts |
-| **Projeto 4** | [**`Gabriel-V-Mendes/Observabilidade`**](https://github.com/Gabriel-V-Mendes/Observabilidade) | Observabilidade SRE com Prometheus, Grafana Alloy (substituto do Promtail), Loki (chart 2026), Alertmanager, SLOs/Error Budget, Runbooks e Post-Mortem |
-| **Projeto 5** | [**`Gabriel-V-Mendes/platform-engineering`**](https://github.com/Gabriel-V-Mendes/platform-engineering) | Internal Developer Platform (IDP) leve, Golden Path CLI (`make new-service`), Reusable Workflows e módulo Terraform consumido em [`terraform-consumer-microservice`](https://github.com/Gabriel-V-Mendes/terraform-consumer-microservice) |
+| Projeto | Repositório Oficial | Status do CI | Escopo Principal |
+|---|---|---|---|
+| **Projeto 1 (Este repo)** | [**`Gabriel-V-Mendes/Containeriza-oPipelineCICD`**](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD) | [![CI/CD](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/actions/workflows/ci.yml) | API FastAPI + PostgreSQL 17, Docker multi-stage non-root (`UID 10001`), CI/CD (Pytest, Gitleaks, Hadolint, Trivy, GHCR) e Deploy via Compose/SSH |
+| **Projeto 2** | [**`Gabriel-V-Mendes/infraestrutura-aws-terraform-localstack`**](https://github.com/Gabriel-V-Mendes/infraestrutura-aws-terraform-localstack) | [![Infra CI/CD](https://github.com/Gabriel-V-Mendes/infraestrutura-aws-terraform-localstack/actions/workflows/infra-ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/infraestrutura-aws-terraform-localstack/actions/workflows/infra-ci.yml) | IaC com OpenTofu 1.10+, S3 State Lock nativo (`.tflock`), federação OIDC sem chaves estáticas, FinOps e validação E2E em Floci |
+| **Projeto 3** | [**`Gabriel-V-Mendes/GitOps_Kubernets`**](https://github.com/Gabriel-V-Mendes/GitOps_Kubernets) | [![Validate Manifests & Security](https://github.com/Gabriel-V-Mendes/GitOps_Kubernets/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/GitOps_Kubernets/actions/workflows/ci.yml) | GitOps em Kubernetes (`kind`) para esta API com ArgoCD (`selfHeal`), Gateway API (Envoy Gateway), SOPS (`age`) + External Secrets e Argo Rollouts |
+| **Projeto 4** | [**`Gabriel-V-Mendes/Observabilidade`**](https://github.com/Gabriel-V-Mendes/Observabilidade) | [![Observability & SLO CI](https://github.com/Gabriel-V-Mendes/Observabilidade/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/Observabilidade/actions/workflows/ci.yml) | Observabilidade SRE com Prometheus, Grafana Alloy (substituto do Promtail), Loki (chart 2026), Alertmanager, SLOs/Error Budget, Runbooks e Post-Mortem |
+| **Projeto 5** | [**`Gabriel-V-Mendes/platform-engineering`**](https://github.com/Gabriel-V-Mendes/platform-engineering) | [![Platform & IDP CI](https://github.com/Gabriel-V-Mendes/platform-engineering/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/platform-engineering/actions/workflows/ci.yml) | Internal Developer Platform (IDP) leve, Golden Path CLI (`make new-service`), Reusable Workflows e módulo Terraform consumido em [`terraform-consumer-microservice`](https://github.com/Gabriel-V-Mendes/terraform-consumer-microservice) |
 
