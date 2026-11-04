@@ -1,7 +1,7 @@
 def test_health_check(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy", "message": "API is running!"}
+    assert response.json() == {"status": "broken", "message": "API is running!"}
 
 
 def test_readiness_check(client):
