@@ -64,7 +64,7 @@ app/
   models.py         # tabela items
   schemas.py        # validação Pydantic
   routers/items.py  # CRUD
-tests/              # 11 testes (SQLite local / Postgres no CI), cobertura mínima de 90%
+tests/              # 15 testes (SQLite local / Postgres no CI), 100% de cobertura (mínimo exigido: 90%)
 Dockerfile          # multi-stage, digest fixo, sem pip, não-root, HEALTHCHECK
 docker-compose.yml       # ambiente local/CI (um comando)
 docker-compose.prod.yml  # produção (imagem do GHCR, sem defaults de senha)
@@ -104,6 +104,12 @@ O pgAdmin é opcional: `docker compose --profile tools up -d` → http://localho
 | PATCH | `/items/{id}` | Atualização parcial | 200 / 404 / 422 |
 | DELETE | `/items/{id}` | Remove | 204 / 404 |
 
+### Evidência Visual da API em Execução
+
+![Swagger UI da DevOps API em Execução](docs/screenshots/api-swagger-running.png)
+
+![Evidência de Respostas HTTP, Container Non-Root (UID 10001) e Cobertura de Testes](docs/screenshots/api-production-response.png)
+
 ---
 
 ## 4. Testes e lint
@@ -114,6 +120,28 @@ make lint     # ruff check, ruff format --check, hadolint
 make scan     # Trivy na imagem local, com o mesmo critério do CI
 make secrets  # gitleaks no histórico e nos arquivos não commitados
 make help     # todos os atalhos
+```
+
+Saída real de `make test` (**15 testes aprovados, 100% de cobertura** — mínimo exigido no `pyproject.toml`: `90%`):
+
+```text
+tests/test_health_config.py ....                                         [ 26%]
+tests/test_main.py ...........                                           [100%]
+
+Name                      Stmts   Miss  Cover   Missing
+-------------------------------------------------------
+app/__init__.py               0      0   100%
+app/config.py                 8      0   100%
+app/database.py              16      0   100%
+app/main.py                  24      0   100%
+app/models.py                13      0   100%
+app/routers/__init__.py       0      0   100%
+app/routers/items.py         41      0   100%
+app/schemas.py               21      0   100%
+-------------------------------------------------------
+TOTAL                       123      0   100%
+Required test coverage of 90.0% reached. Total coverage: 100.00%
+============================== 15 passed in 0.82s ==============================
 ```
 
 Para rodar os testes contra Postgres localmente, como o CI faz:
@@ -187,6 +215,12 @@ gh pr create --fill
 
 O job `Test` fica vermelho, `Build, Scan & Push` é pulado e o botão de merge fica bloqueado ("Required statuses must pass"). Feche o PR depois.
 
+* **Evidência real do bloqueio de merge (PR fechado com teste quebrado de propósito):**
+  * [**Pull Request #15 (`demo/teste-quebrado`)**](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/pull/15) — mostra o check `Test` vermelho (❌), `Build, Scan & Push` pulado e o merge bloqueado pela Branch Protection (`mergeStateStatus: BLOCKED`), sendo fechado em seguida.
+  * [**Run #41856341293 (Falha intencional no job Test)**](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/actions/runs/41856341293).
+
+![PR #15 com Teste Quebrado e Merge Bloqueado pela Branch Protection](docs/screenshots/pr-broken-test-blocked.png)
+
 ---
 
 ## 7. Antes × depois
@@ -259,9 +293,21 @@ Se o repositório for **privado**, o plano Free do GitHub inclui uma cota mensal
 4. **Backup do Postgres** (`pg_dump` agendado para um storage externo) e um teste de restauração. Sem isso, o volume da VPS é ponto único de falha.
 5. **Deploy sem indisponibilidade** (blue/green com o proxy) e um ambiente de **staging** antes de produção.
 6. **Assinar a imagem** com cosign (keyless via OIDC) e publicar SBOM e provenance, para a VPS só rodar imagem assinada pelo CI.
-7. **Segredos fora de arquivo `.env`** (Docker secrets, SOPS ou um vault) e **Rulesets** do GitHub no lugar da branch protection clássicatá no `.gitignore`) e nos Secrets do GitHub.
-- Os defaults do `docker-compose.yml` (`devops`/`devops`) val.
-8. **Observabilidade:** logs em JSON, métricas Prometheus (`/metrics`) e alerta quando o `/health/ready` falhar.
-9. **Nome do repositório:** `Containeriza-oPipelineCICD` foi um erro de digitação (o "ç" e o "ã" viraram `-o`). Renomearia para algo como `fastapi-docker-cicd`.
+7. **Segredos fora de arquivo `.env`** (Docker secrets, SOPS ou um vault) e **Rulesets** do GitHub no lugar da branch protection clássica.
+8. **Observabilidade:** logs em JSON, métricas Prometheus (`/metrics`) e alerta quando o `/health/ready` falhar (implementado no [Projeto 4 · Observabilidade](https://github.com/Gabriel-V-Mendes/Observabilidade)).
+9. **Nome do repositório:** `Containeriza-oPipelineCICD` foi um erro de digitação inicial (o "ç" e o "ã" viraram `-o`). Foi mantido para preservar o histórico de runs, pacotes no GHCR e referências cruzadas, mas em um projeto novo usaria `fastapi-docker-cicd`.
 
 ---
+
+## 11. Ecossistema do Portfólio DevOps (Links Cruzados)
+
+Este repositório é o **Projeto 1** da trilha de engenharia DevOps/SRE:
+
+| Projeto | Repositório Oficial | Escopo Principal |
+|---|---|---|
+| **Projeto 1 (Este repo)** | [**`Gabriel-V-Mendes/Containeriza-oPipelineCICD`**](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD) | API FastAPI + PostgreSQL 17, Docker multi-stage non-root (`UID 10001`), CI/CD (Pytest, Gitleaks, Hadolint, Trivy, GHCR) e Deploy via Compose/SSH |
+| **Projeto 2** | [**`Gabriel-V-Mendes/infraestrutura-aws-terraform-localstack`**](https://github.com/Gabriel-V-Mendes/infraestrutura-aws-terraform-localstack) | IaC com OpenTofu 1.10+, S3 State Lock nativo (`.tflock`), federação OIDC sem chaves estáticas, FinOps e validação E2E em Floci |
+| **Projeto 3** | [**`Gabriel-V-Mendes/GitOps_Kubernets`**](https://github.com/Gabriel-V-Mendes/GitOps_Kubernets) | GitOps em Kubernetes (`kind`) para esta API com ArgoCD (`selfHeal`), Gateway API (Envoy Gateway), SOPS (`age`) + External Secrets e Argo Rollouts |
+| **Projeto 4** | [**`Gabriel-V-Mendes/Observabilidade`**](https://github.com/Gabriel-V-Mendes/Observabilidade) | Observabilidade SRE com Prometheus, Grafana Alloy (substituto do Promtail), Loki (chart 2026), Alertmanager, SLOs/Error Budget, Runbooks e Post-Mortem |
+| **Projeto 5** | [**`Gabriel-V-Mendes/platform-engineering`**](https://github.com/Gabriel-V-Mendes/platform-engineering) | Internal Developer Platform (IDP) leve, Golden Path CLI (`make new-service`), Reusable Workflows e módulo Terraform consumido em [`terraform-consumer-microservice`](https://github.com/Gabriel-V-Mendes/terraform-consumer-microservice) |
+

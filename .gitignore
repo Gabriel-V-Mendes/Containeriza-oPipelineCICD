@@ -9,4 +9,4 @@ venv/
 coverage.xml
 htmlcov/
 GitOps_Kubernets/
-docs/
+docs/GUIA_DE_ESTUDO.md

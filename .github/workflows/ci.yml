@@ -236,6 +236,31 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Provisionar ambiente da VPS (quando DEPLOY_HOST=127.0.0.1)
+        if: env.DEPLOY_HOST == '127.0.0.1'
+        env:
+          SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+        run: |
+          if ! id -u "$DEPLOY_USER" >/dev/null 2>&1; then
+            sudo useradd -m -s /bin/bash "$DEPLOY_USER"
+          fi
+          sudo usermod -aG docker "$DEPLOY_USER"
+          sudo install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "/home/$DEPLOY_USER/.ssh"
+          printf '%s\n' "$SSH_PUBLIC_KEY" | sudo tee "/home/$DEPLOY_USER/.ssh/authorized_keys" >/dev/null
+          sudo chown "$DEPLOY_USER:$DEPLOY_USER" "/home/$DEPLOY_USER/.ssh/authorized_keys"
+          sudo chmod 600 "/home/$DEPLOY_USER/.ssh/authorized_keys"
+          sudo install -d -m 755 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$DEPLOY_PATH"
+          sudo tee "$DEPLOY_PATH/.env" >/dev/null <<EOF
+          IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}
+          POSTGRES_USER=devops_prod
+          POSTGRES_PASSWORD=$(openssl rand -hex 24)
+          POSTGRES_DB=devops_prod
+          API_PORT=8000
+          EOF
+          sudo chown "$DEPLOY_USER:$DEPLOY_USER" "$DEPLOY_PATH/.env"
+          sudo chmod 600 "$DEPLOY_PATH/.env"
+          sudo systemctl start ssh || sudo service ssh start
+
       - name: Configurar SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -243,7 +268,11 @@ jobs:
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "$DEPLOY_HOST" > ~/.ssh/known_hosts
+          fi
           chmod 600 ~/.ssh/id_deploy ~/.ssh/known_hosts
 
       - name: Enviar docker-compose.prod.yml
@@ -259,7 +288,17 @@ jobs:
              && docker compose -f docker-compose.prod.yml pull api \
              && docker compose -f docker-compose.prod.yml up -d --wait --wait-timeout 120 \
              && docker compose -f docker-compose.prod.yml ps \
+             && curl -fsS http://127.0.0.1:8000/health && echo \
+             && curl -fsS http://127.0.0.1:8000/health/ready && echo \
+             && curl -fsS -X POST http://127.0.0.1:8000/items -H 'Content-Type: application/json' -d '{\"name\":\"deploy-vps\",\"description\":\"Validado pelo job Deploy via SSH\"}' && echo \
+             && curl -fsS http://127.0.0.1:8000/items && echo \
              && docker image prune -f"
+
+      - name: Limpar stack temporária (quando DEPLOY_HOST=127.0.0.1)
+        if: always() && env.DEPLOY_HOST == '127.0.0.1'
+        run: |
+          ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$DEPLOY_PATH' && docker compose -f docker-compose.prod.yml down -v" || true
 
   # ==========================================
   # GitOps (Projeto 3): Abre PR no repositório separado de manifests
