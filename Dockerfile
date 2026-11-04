@@ -7,7 +7,7 @@
 # ==========================================
 # Estágio 1: builder — instala dependências num venv
 # ==========================================
-FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 AS builder
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 # ==========================================
 # Estágio 2: runtime — imagem final, sem ferramentas de build
 # ==========================================
-FROM python:3.12-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1 AS runtime
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS runtime
 
 LABEL org.opencontainers.image.title="devops-api" \
       org.opencontainers.image.description="API FastAPI containerizada com CI/CD"
