@@ -312,7 +312,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      GITOPS_REPO: ${{ vars.GITOPS_REPO || 'Gabriel-V-Mendes/GitOps_Kubernets' }}
+      GITOPS_REPO: ${{ vars.GITOPS_REPO || 'Gabriel-V-Mendes/GitOps_Kubernetes' }}
       IMAGE_TAG: sha-${{ github.sha }}
       GH_TOKEN: ${{ secrets.GITOPS_PAT }}
     steps:

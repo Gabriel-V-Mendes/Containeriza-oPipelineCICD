@@ -1,6 +1,6 @@
 # DevOps API: FastAPI containerizada com CI/CD
 
-[![CI/CD](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/actions/workflows/ci.yml/badge.svg)](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/Gabriel-V-Mendes/ContainerizacaoPipelineCICD/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/ContainerizacaoPipelineCICD/actions/workflows/ci.yml)
 
 API REST em **FastAPI + PostgreSQL**, empacotada numa imagem Docker enxuta e sem root. Um pipeline do **GitHub Actions** roda lint, testes, scan de segredos, build, scan de vulnerabilidades (Trivy), publica a imagem no **GHCR** e faz o **deploy via Docker Compose** numa VPS.
 
@@ -164,7 +164,7 @@ Arquivo: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 Tags publicadas: `sha-<commit>` (imutável, é a usada no deploy), `main`, `latest` e `X.Y.Z` (quando há tag git `vX.Y.Z`).
 
 * **Evidência do CI e do Deploy Real na `main` (GitHub Actions):**
-  [Run #41867864099 no GitHub Actions](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/actions/runs/41867864099) — todos os jobs **`Lint`**, **`Secret Scan`**, **`Test`**, **`Build, Scan & Push`** e **`Deploy (Compose via SSH)`** aprovados (`✓`) na branch `main`.
+  [Run #41867864099 no GitHub Actions](https://github.com/Gabriel-V-Mendes/ContainerizacaoPipelineCICD/actions/runs/41867864099) — todos os jobs **`Lint`**, **`Secret Scan`**, **`Test`**, **`Build, Scan & Push`** e **`Deploy (Compose via SSH)`** aprovados (`✓`) na branch `main`.
 
 ![Run #41867864099 na main com o job Deploy (Compose via SSH) Verde](docs/screenshots/ci-deploy-green.png)
 
@@ -218,8 +218,8 @@ gh pr create --fill
 O job `Test` fica vermelho, `Build, Scan & Push` é pulado e o botão de merge fica bloqueado ("Required statuses must pass"). Feche o PR depois.
 
 * **Evidência real do bloqueio de merge (PR fechado com teste quebrado de propósito):**
-  * [**Pull Request #15 (`demo/teste-quebrado`)**](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/pull/15) — mostra o check `Test` vermelho (❌), `Build, Scan & Push` pulado e o merge bloqueado pela Branch Protection (`mergeStateStatus: BLOCKED`), sendo fechado em seguida.
-  * [**Run #41856341293 (Falha intencional no job Test)**](https://github.com/Gabriel-V-Mendes/Containeriza-oPipelineCICD/actions/runs/41856341293).
+  * [**Pull Request #15 (`demo/teste-quebrado`)**](https://github.com/Gabriel-V-Mendes/ContainerizacaoPipelineCICD/pull/15) — mostra o check `Test` vermelho (❌), `Build, Scan & Push` pulado e o merge bloqueado pela Branch Protection (`mergeStateStatus: BLOCKED`), sendo fechado em seguida.
+  * [**Run #41856341293 (Falha intencional no job Test)**](https://github.com/Gabriel-V-Mendes/ContainerizacaoPipelineCICD/actions/runs/41856341293).
 
 ![PR #15 com Teste Quebrado e Merge Bloqueado pela Branch Protection](docs/screenshots/pr-broken-test-blocked.png)
 
@@ -297,7 +297,17 @@ Se o repositório for **privado**, o plano Free do GitHub inclui uma cota mensal
 6. **Assinar a imagem** com cosign (keyless via OIDC) e publicar SBOM e provenance, para a VPS só rodar imagem assinada pelo CI.
 7. **Segredos fora de arquivo `.env`** (Docker secrets, SOPS ou um vault) e **Rulesets** do GitHub no lugar da branch protection clássica.
 8. **Observabilidade:** logs em JSON, métricas Prometheus (`/metrics`) e alerta quando o `/health/ready` falhar (implementado no [Projeto 4 · Observabilidade](https://github.com/Gabriel-V-Mendes/Observabilidade)).
-9. **Nome do repositório:** `Containeriza-oPipelineCICD` foi um erro de digitação inicial (o "ç" e o "ã" viraram `-o`). Foi mantido para preservar o histórico de runs, pacotes no GHCR e referências cruzadas, mas em um projeto novo usaria `fastapi-docker-cicd`.
 
 ---
 
+## 11. Ecossistema do Portfólio DevOps (Links Cruzados)
+
+Este repositório é o **Projeto 1** da trilha de engenharia DevOps/SRE:
+
+| Projeto | Repositório Oficial | Status do CI | Escopo Principal |
+|---|---|---|---|
+| **Projeto 1 (Este repo)** | [**`Gabriel-V-Mendes/ContainerizacaoPipelineCICD`**](https://github.com/Gabriel-V-Mendes/ContainerizacaoPipelineCICD) | [![CI/CD](https://github.com/Gabriel-V-Mendes/ContainerizacaoPipelineCICD/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/ContainerizacaoPipelineCICD/actions/workflows/ci.yml) | API FastAPI + PostgreSQL 17, Docker multi-stage non-root (`UID 10001`), CI/CD (Pytest, Gitleaks, Hadolint, Trivy, GHCR) e Deploy via Compose/SSH |
+| **Projeto 2** | [**`Gabriel-V-Mendes/infraestrutura-aws-opentofu-floci`**](https://github.com/Gabriel-V-Mendes/infraestrutura-aws-opentofu-floci) | [![Infra CI/CD](https://github.com/Gabriel-V-Mendes/infraestrutura-aws-opentofu-floci/actions/workflows/infra-ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/infraestrutura-aws-opentofu-floci/actions/workflows/infra-ci.yml) | IaC com OpenTofu 1.10+, S3 State Lock nativo (`.tflock`), federação OIDC sem chaves estáticas, FinOps e validação E2E em Floci |
+| **Projeto 3** | [**`Gabriel-V-Mendes/GitOps_Kubernetes`**](https://github.com/Gabriel-V-Mendes/GitOps_Kubernetes) | [![Validate Manifests & Security](https://github.com/Gabriel-V-Mendes/GitOps_Kubernetes/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/GitOps_Kubernetes/actions/workflows/ci.yml) | GitOps em Kubernetes (`kind`) para esta API com ArgoCD (`selfHeal`), Gateway API (Envoy Gateway), SOPS (`age`) + External Secrets e Argo Rollouts |
+| **Projeto 4** | [**`Gabriel-V-Mendes/Observabilidade`**](https://github.com/Gabriel-V-Mendes/Observabilidade) | [![Observability & SLO CI](https://github.com/Gabriel-V-Mendes/Observabilidade/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/Observabilidade/actions/workflows/ci.yml) | Observabilidade SRE com Prometheus, Grafana Alloy (substituto do Promtail), Loki (chart 2026), Alertmanager, SLOs/Error Budget, Runbooks e Post-Mortem |
+| **Projeto 5** | [**`Gabriel-V-Mendes/platform-engineering`**](https://github.com/Gabriel-V-Mendes/platform-engineering) | [![Platform & IDP CI](https://github.com/Gabriel-V-Mendes/platform-engineering/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Gabriel-V-Mendes/platform-engineering/actions/workflows/ci.yml) | Internal Developer Platform (IDP) leve, Golden Path CLI (`make new-service`), Reusable Workflows e módulo Terraform consumido em [`terraform-consumer-microservice`](https://github.com/Gabriel-V-Mendes/terraform-consumer-microservice) |

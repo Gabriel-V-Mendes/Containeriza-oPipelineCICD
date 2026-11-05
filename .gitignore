@@ -8,5 +8,5 @@ venv/
 .coverage
 coverage.xml
 htmlcov/
-GitOps_Kubernets/
+GitOps_Kubernetes/
 docs/GUIA_DE_ESTUDO.md
