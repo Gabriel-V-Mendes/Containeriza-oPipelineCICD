@@ -41,7 +41,10 @@ ENV PATH="/opt/venv/bin:$PATH" \
 # 1) Remove o pip "de sistema" que vem na imagem base (a aplicação usa o venv).
 # 2) Cria um usuário sem privilégios com UID/GID numéricos fixos (permite que
 #    orquestradores validem "runAsNonRoot" sem precisar resolver nomes).
-RUN python -m pip uninstall -y pip \
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall -y pip \
     && groupadd --system --gid 10001 app \
     && useradd --system --uid 10001 --gid app --no-create-home --shell /usr/sbin/nologin app
 
